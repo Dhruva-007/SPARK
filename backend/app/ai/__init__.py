@@ -1,0 +1,1 @@
+"""AI layer package — Vertex AI, Gemini client, prompts."""
