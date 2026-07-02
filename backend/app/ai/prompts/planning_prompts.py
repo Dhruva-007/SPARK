@@ -1,6 +1,5 @@
 """
 SPARK — Planning Agent Prompts
-Prompts for task decomposition and milestone generation.
 """
 
 from datetime import datetime, timezone
@@ -16,42 +15,32 @@ def build_task_planning_prompt(
     genome_context: str,
 ) -> str:
     """
-    Builds the prompt for the Planner Agent to decompose a task into milestones.
-
-    Args:
-        task_title: The task name
-        task_description: Full task description
-        deadline: ISO deadline string
-        estimated_hours: User's estimate of total hours needed
-        complexity: low | medium | high
-        category: academic | work | personal
-        genome_context: Compressed behavioral context from the Completion Genome
+    Builds the prompt for the Planner Agent.
+    Kept concise to preserve token budget for the response.
     """
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
-    return f"""Create a detailed execution plan for the following task.
+    return f"""Create an execution plan for this task.
 
-TASK INFORMATION:
-Title: {task_title}
-Description: {task_description}
-Category: {category}
-Complexity: {complexity}
-Deadline: {deadline}
-Estimated hours: {estimated_hours}
-Current time: {now}
+TASK: {task_title}
+DESCRIPTION: {task_description}
+CATEGORY: {category}
+COMPLEXITY: {complexity}
+DEADLINE: {deadline}
+ESTIMATED HOURS: {estimated_hours}
+CURRENT TIME: {now}
 
-USER BEHAVIORAL CONTEXT:
-{genome_context}
+USER BEHAVIORAL CONTEXT: {genome_context}
 
-Generate a milestone-based execution plan. Each milestone should be:
-- Completable in a single focused work session (25-90 minutes)
-- Specific enough to start immediately without further planning
-- Ordered so completion of each milestone enables the next
-- The first milestone must be achievable in the next 30 minutes
+Generate 3 to 6 milestones. Each milestone must be completable in one focused session.
+The first milestone must be achievable in 30 minutes or less.
+Make milestones specific enough that the user can start immediately without further planning.
 
-Consider the user's behavioral patterns when estimating milestone durations.
-If the user historically underestimates, add appropriate buffer time.
-"""
+Also provide:
+- first_action: the single smallest possible action (under 5 minutes, starts immediately)
+- total_estimated_hours: realistic total hours accounting for user behavioral patterns
+- implicit_requirements: any hidden requirements not stated explicitly
+- confidence: your confidence in this plan (0.0 to 1.0)"""
 
 
 def build_timeline_prompt(
@@ -60,24 +49,19 @@ def build_timeline_prompt(
     available_hours_per_day: float,
     deadline: str,
 ) -> str:
-    """
-    Builds a prompt for generating a realistic timeline given available hours.
-    """
     milestones_str = "\n".join(
-        f"- {m['title']} ({m['estimated_minutes']} min)" for m in milestones
+        f"- {m['title']} ({m['estimated_minutes']} min)"
+        for m in milestones
     )
 
-    return f"""Given the following milestones for "{task_title}", create a realistic timeline.
+    return f"""Given milestones for "{task_title}", create a realistic timeline.
 
 MILESTONES:
 {milestones_str}
 
-CONSTRAINTS:
-- Available working hours per day: {available_hours_per_day}
-- Deadline: {deadline}
-- Current time: {datetime.now(timezone.utc).isoformat()}
+Available hours per day: {available_hours_per_day}
+Deadline: {deadline}
 
-Determine if this task can be completed before the deadline.
-If yes, assign specific dates to each milestone.
-If no, identify which milestones could be cut or compressed.
-"""
+Determine if this is achievable before the deadline.
+If yes, assign dates to each milestone.
+If no, identify what can be cut or compressed."""
