@@ -1,6 +1,5 @@
 """
 SPARK — Genome Insights Service
-Generates AI-powered behavioral insights from the Completion Genome.
 """
 
 from datetime import datetime, timezone
@@ -19,7 +18,6 @@ class GenomeInsightsService:
         self._genome_service = GenomeService()
 
     def get_full_insights(self, user_id: str) -> dict:
-        """Returns the complete genome insights package."""
         genome = self._genome_service.get_genome(user_id)
         now = datetime.now(timezone.utc)
         current_hour = now.hour
@@ -35,13 +33,11 @@ class GenomeInsightsService:
         }
 
     def get_ai_insights(self, user_id: str) -> list[dict]:
-        """Returns behavioral insights — rule-based for now."""
         genome = self._genome_service.get_genome(user_id)
         current_hour = datetime.now(timezone.utc).hour
         return self._generate_insights(genome, current_hour)
 
     def _build_profile(self, genome: CompletionGenome, current_hour: int) -> dict:
-        """Builds structured genome profile. New users get 0 health."""
         peak_hours = genome.productivity.peakHours
         is_peak = current_hour in peak_hours
 
@@ -53,32 +49,48 @@ class GenomeInsightsService:
         if total_tasks == 0:
             maturity = "initializing"
             maturity_level = 0
+            health_score = 0.0
+            success_rate_display = 0.0
         elif total_tasks < 5:
             maturity = "learning"
             maturity_level = 1
-        elif total_tasks < 15:
-            maturity = "developing"
-            maturity_level = 2
-        elif total_tasks < 30:
-            maturity = "calibrated"
-            maturity_level = 3
-        else:
-            maturity = "expert"
-            maturity_level = 4
-
-        # Health score — 0 for brand new users
-        if total_tasks == 0:
-            health_score = 0.0
-            success_rate_display = 0.0
-        else:
             health_factors = [
                 genome.completion.successRate * 100,
                 max(0, 100 - genome.procrastination.startingDifficulty * 10),
-                min(
-                    100,
-                    (1 / max(genome.estimation.averageUnderestimationFactor, 0.5))
-                    * 100,
-                ),
+                min(100, (1 / max(genome.estimation.averageUnderestimationFactor, 0.5)) * 100),
+                min(100, genome.completion.streakCurrent * 10),
+            ]
+            health_score = min(100, sum(health_factors) / len(health_factors))
+            success_rate_display = round(genome.completion.successRate * 100, 1)
+        elif total_tasks < 15:
+            maturity = "developing"
+            maturity_level = 2
+            health_factors = [
+                genome.completion.successRate * 100,
+                max(0, 100 - genome.procrastination.startingDifficulty * 10),
+                min(100, (1 / max(genome.estimation.averageUnderestimationFactor, 0.5)) * 100),
+                min(100, genome.completion.streakCurrent * 10),
+            ]
+            health_score = min(100, sum(health_factors) / len(health_factors))
+            success_rate_display = round(genome.completion.successRate * 100, 1)
+        elif total_tasks < 30:
+            maturity = "calibrated"
+            maturity_level = 3
+            health_factors = [
+                genome.completion.successRate * 100,
+                max(0, 100 - genome.procrastination.startingDifficulty * 10),
+                min(100, (1 / max(genome.estimation.averageUnderestimationFactor, 0.5)) * 100),
+                min(100, genome.completion.streakCurrent * 10),
+            ]
+            health_score = min(100, sum(health_factors) / len(health_factors))
+            success_rate_display = round(genome.completion.successRate * 100, 1)
+        else:
+            maturity = "expert"
+            maturity_level = 4
+            health_factors = [
+                genome.completion.successRate * 100,
+                max(0, 100 - genome.procrastination.startingDifficulty * 10),
+                min(100, (1 / max(genome.estimation.averageUnderestimationFactor, 0.5)) * 100),
                 min(100, genome.completion.streakCurrent * 10),
             ]
             health_score = min(100, sum(health_factors) / len(health_factors))
@@ -91,7 +103,7 @@ class GenomeInsightsService:
             "total_tasks_analyzed": total_tasks,
             "is_peak_hour": is_peak,
             "current_hour": current_hour,
-            "peak_hours": peak_hours,
+            "peak_hours": peak_hours if total_tasks > 0 else [],
             "success_rate": success_rate_display,
             "streak_current": genome.completion.streakCurrent,
             "streak_best": genome.completion.streakBest,
@@ -106,15 +118,12 @@ class GenomeInsightsService:
         genome: CompletionGenome,
         current_hour: int,
     ) -> list[dict]:
-        """Generates rule-based behavioral insights."""
         insights: list[dict] = []
-        peak_hours = genome.productivity.peakHours
         total_tasks = (
             genome.completion.totalTasksCompleted
             + genome.completion.totalTasksFailed
         )
 
-        # ── New user welcome ─────────────────────────────────
         if total_tasks == 0:
             insights.append({
                 "category": "completion",
@@ -128,7 +137,8 @@ class GenomeInsightsService:
             })
             return insights
 
-        # ── Productivity insights ────────────────────────────
+        peak_hours = genome.productivity.peakHours
+
         is_peak = current_hour in peak_hours
         if is_peak:
             insights.append({
@@ -136,9 +146,9 @@ class GenomeInsightsService:
                 "title": "You're in your peak zone",
                 "description": (
                     f"Hour {current_hour}:00 is one of your peak productivity hours. "
-                    f"Your focus typically lasts {genome.productivity.averageFocusDuration} minutes."
+                    f"Focus typically lasts {genome.productivity.averageFocusDuration} minutes."
                 ),
-                "actionable": "Start your most challenging task now for best results.",
+                "actionable": "Start your most challenging task now.",
                 "priority": "high",
             })
         elif peak_hours:
@@ -150,10 +160,10 @@ class GenomeInsightsService:
                 "category": "productivity",
                 "title": "Save deep work for peak hours",
                 "description": (
-                    f"Your next peak window starts at {next_peak}:00. "
+                    f"Next peak window at {next_peak}:00. "
                     f"Current time ({current_hour}:00) is better for lighter tasks."
                 ),
-                "actionable": f"Handle admin tasks now. Start deep work at {next_peak}:00.",
+                "actionable": f"Start deep work at {next_peak}:00.",
                 "priority": "medium",
             })
 
@@ -162,36 +172,19 @@ class GenomeInsightsService:
             insights.append({
                 "category": "productivity",
                 "title": "Short focus sessions detected",
-                "description": (
-                    f"Your average focus duration is {focus} minutes. "
-                    "This is below the 25-minute Pomodoro minimum."
-                ),
-                "actionable": "Try phone-free 25-minute sessions to build focus stamina.",
+                "description": f"Average focus: {focus} minutes. Below 25-minute minimum.",
+                "actionable": "Try phone-free 25-minute sessions.",
                 "priority": "high",
             })
 
-        # ── Estimation insights ──────────────────────────────
         underest = genome.estimation.averageUnderestimationFactor
         if underest > 1.4:
             insights.append({
                 "category": "estimation",
                 "title": f"You underestimate by {(underest - 1) * 100:.0f}%",
-                "description": (
-                    f"Tasks typically take {underest:.1f}x longer than your estimates. "
-                    "SPARK adjusts deadlines automatically using this factor."
-                ),
-                "actionable": f"Multiply your time estimates by {underest:.1f}x for accuracy.",
+                "description": f"Tasks take {underest:.1f}x longer than estimated.",
+                "actionable": f"Multiply estimates by {underest:.1f}x.",
                 "priority": "high",
-            })
-        elif underest < 0.9:
-            insights.append({
-                "category": "estimation",
-                "title": "You overestimate task duration",
-                "description": (
-                    f"Tasks typically take only {underest:.0%} of your estimated time."
-                ),
-                "actionable": "Trust your ability — take on more challenging work.",
-                "priority": "low",
             })
 
         calib = genome.estimation.complexityCalibration
@@ -199,28 +192,19 @@ class GenomeInsightsService:
         if calib[worst_complexity] > 1.5:
             insights.append({
                 "category": "estimation",
-                "title": f"Struggle with {worst_complexity} complexity tasks",
-                "description": (
-                    f"{worst_complexity.capitalize()} tasks take "
-                    f"{calib[worst_complexity]:.1f}x your estimate on average."
-                ),
-                "actionable": (
-                    f"Break {worst_complexity} tasks into smaller sub-tasks "
-                    "before estimating."
-                ),
+                "title": f"Struggle with {worst_complexity} complexity",
+                "description": f"{worst_complexity.capitalize()} tasks take {calib[worst_complexity]:.1f}x estimates.",
+                "actionable": f"Break {worst_complexity} tasks into sub-tasks.",
                 "priority": "medium",
             })
 
-        # ── Procrastination insights ─────────────────────────
         triggers = genome.procrastination.triggers
         if triggers:
             insights.append({
                 "category": "procrastination",
                 "title": "Known procrastination triggers",
-                "description": (
-                    f"You tend to delay when facing: {', '.join(triggers[:3])}."
-                ),
-                "actionable": "When you notice these triggers, start with a 5-minute micro-action.",
+                "description": f"Delay triggers: {', '.join(triggers[:3])}.",
+                "actionable": "Start with a 5-minute micro-action.",
                 "priority": "medium",
             })
 
@@ -228,32 +212,26 @@ class GenomeInsightsService:
         if delay > 2:
             insights.append({
                 "category": "procrastination",
-                "title": f"Average {delay:.1f}-day delay before starting",
-                "description": (
-                    "You typically wait before starting new tasks. "
-                    "SPARK's Activation Agent counters this."
-                ),
-                "actionable": "Open the task document within 30 minutes of creation.",
+                "title": f"Average {delay:.1f}-day delay",
+                "description": "You typically wait before starting.",
+                "actionable": "Open task document within 30 minutes of creation.",
                 "priority": "high",
             })
 
-        # ── Completion insights ──────────────────────────────
         rate = genome.completion.successRate
         if rate > 0.85:
             insights.append({
                 "category": "completion",
                 "title": f"Strong completion rate: {rate:.0%}",
-                "description": "You consistently finish what you start. Keep it up!",
-                "actionable": "Consider taking on more ambitious projects.",
+                "description": "You consistently finish what you start.",
+                "actionable": "Take on more ambitious projects.",
                 "priority": "low",
             })
         elif rate < 0.5 and total_tasks > 3:
             insights.append({
                 "category": "completion",
-                "title": f"Completion rate needs improvement: {rate:.0%}",
-                "description": (
-                    "More than half your tasks are not completed on time."
-                ),
+                "title": f"Completion rate: {rate:.0%}",
+                "description": "Most tasks not completed on time.",
                 "actionable": "Reduce active tasks to 3-4 at a time.",
                 "priority": "high",
             })
@@ -262,26 +240,20 @@ class GenomeInsightsService:
         if streak >= 3:
             insights.append({
                 "category": "completion",
-                "title": f"🔥 {streak}-task completion streak!",
-                "description": f"Your best streak is {genome.completion.streakBest}. Keep pushing!",
-                "actionable": "Complete one more task today to extend the streak.",
+                "title": f"🔥 {streak}-task streak!",
+                "description": f"Best streak: {genome.completion.streakBest}.",
+                "actionable": "Complete one more today to extend it.",
                 "priority": "medium",
             })
 
-        # ── Intervention insights ────────────────────────────
-        best_level = genome.interventionHistory.mostEffectiveLevel
-        worst_level = genome.interventionHistory.leastEffectiveLevel
         total_interventions = genome.interventionHistory.totalInterventions
-
         if total_interventions >= 3:
+            best_level = genome.interventionHistory.mostEffectiveLevel
             insights.append({
                 "category": "intervention",
-                "title": f"Level {best_level} interventions work best for you",
-                "description": (
-                    f"Out of {total_interventions} interventions, "
-                    f"Level {best_level} has the best response rate."
-                ),
-                "actionable": f"SPARK will prioritize Level {best_level} interventions.",
+                "title": f"Level {best_level} interventions work best",
+                "description": f"Out of {total_interventions} interventions.",
+                "actionable": f"SPARK will prioritize Level {best_level}.",
                 "priority": "low",
             })
 
@@ -292,12 +264,17 @@ class GenomeInsightsService:
         genome: CompletionGenome,
         current_hour: int,
     ) -> dict:
-        """Formats productivity data for the frontend heatmap."""
-        peak_hours = genome.productivity.peakHours
+        total_tasks = (
+            genome.completion.totalTasksCompleted
+            + genome.completion.totalTasksFailed
+        )
+        peak_hours = genome.productivity.peakHours if total_tasks > 0 else []
 
         hourly_productivity: list[dict] = []
         for hour in range(24):
-            if hour in peak_hours:
+            if total_tasks == 0:
+                score = 0
+            elif hour in peak_hours:
                 score = 85 + (5 if peak_hours and hour == peak_hours[len(peak_hours) // 2] else 0)
             elif any(abs(hour - p) <= 1 for p in peak_hours):
                 score = 60
@@ -323,15 +300,27 @@ class GenomeInsightsService:
         }
 
     def _build_estimation_data(self, genome: CompletionGenome) -> dict:
+        total_tasks = (
+            genome.completion.totalTasksCompleted
+            + genome.completion.totalTasksFailed
+        )
         calib = genome.estimation.complexityCalibration
+
+        if total_tasks == 0:
+            return {
+                "underestimation_factor": 0,
+                "accuracy_percentage": 0,
+                "complexity_calibration": {
+                    "low": {"factor": 0, "label": "Low"},
+                    "medium": {"factor": 0, "label": "Medium"},
+                    "high": {"factor": 0, "label": "High"},
+                },
+            }
+
         return {
             "underestimation_factor": genome.estimation.averageUnderestimationFactor,
             "accuracy_percentage": round(
-                min(
-                    100,
-                    (1 / max(genome.estimation.averageUnderestimationFactor, 0.1))
-                    * 100,
-                ),
+                min(100, (1 / max(genome.estimation.averageUnderestimationFactor, 0.1)) * 100),
                 1,
             ),
             "complexity_calibration": {
@@ -343,13 +332,25 @@ class GenomeInsightsService:
 
     def _build_completion_data(self, genome: CompletionGenome) -> dict:
         total = genome.completion.totalTasksCompleted + genome.completion.totalTasksFailed
+
+        if total == 0:
+            return {
+                "success_rate": 0,
+                "total_completed": 0,
+                "total_failed": 0,
+                "completion_accuracy": 0,
+                "best_day": 0,
+                "streak_current": 0,
+                "streak_best": 0,
+            }
+
         return {
-            "success_rate": round(genome.completion.successRate * 100, 1) if total > 0 else 0.0,
+            "success_rate": round(genome.completion.successRate * 100, 1),
             "total_completed": genome.completion.totalTasksCompleted,
             "total_failed": genome.completion.totalTasksFailed,
             "completion_accuracy": round(
                 genome.completion.averageCompletionAccuracy * 100, 1
-            ) if total > 0 else 0.0,
+            ),
             "best_day": genome.completion.bestCompletionDayOfWeek,
             "streak_current": genome.completion.streakCurrent,
             "streak_best": genome.completion.streakBest,
@@ -357,6 +358,16 @@ class GenomeInsightsService:
 
     def _build_intervention_data(self, genome: CompletionGenome) -> dict:
         history = genome.interventionHistory
+
+        if history.totalInterventions == 0:
+            return {
+                "total_interventions": 0,
+                "successful_interventions": 0,
+                "effectiveness_rate": 0,
+                "most_effective_level": 0,
+                "least_effective_level": 0,
+            }
+
         effectiveness_rate = (
             history.successfulInterventions / max(history.totalInterventions, 1)
         )
