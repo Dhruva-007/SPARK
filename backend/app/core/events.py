@@ -40,6 +40,7 @@ async def _startup() -> None:
     1. Validate configuration
     2. Initialize Firebase Admin SDK + Firestore
     3. Initialize Vertex AI SDK
+    4. Register all agents
     """
     # ── Step 1: Configuration ──────────────────────────────
     logger.info("Startup: validating configuration")
@@ -72,15 +73,23 @@ async def _startup() -> None:
     initialize_vertex_ai()
 
     if is_vertex_ai_initialized():
-        logger.info(
-            "Vertex AI ready",
-            model=settings.VERTEX_AI_MODEL,
-        )
+        logger.info("Vertex AI ready", model=settings.VERTEX_AI_MODEL)
     else:
         logger.warning(
             "Vertex AI not initialized — AI features unavailable",
             hint="Provide GOOGLE_CLOUD_PROJECT and credentials",
         )
+
+    # ── Step 4: Register Agents ────────────────────────────
+    logger.info("Startup: registering agents")
+    import app.agents  # noqa: F401 — triggers __init__.py which registers all agents
+    from app.agents.registry import list_agents
+    registered = list_agents()
+    logger.info(
+        "Agents registered",
+        agents=registered,
+        count=len(registered),
+    )
 
     logger.info("All startup tasks complete")
 
