@@ -1,6 +1,6 @@
 """
-SPARK — Completion Momentum Score Routes
-CMS retrieval and recalculation endpoints.
+SPARK — CMS Routes
+Wired to real CMSService.
 """
 
 from typing import Any
@@ -10,24 +10,18 @@ from fastapi import APIRouter
 from app.api.dependencies import CurrentUser
 from app.core.logging import get_logger
 from app.models.common import success_response
+from app.services.cms_service import CMSService
 
 router = APIRouter()
 logger = get_logger(__name__)
 
+_cms_service = CMSService()
+
 
 @router.get("/tasks/{task_id}/cms", summary="Get current CMS for a task")
 async def get_cms(task_id: str, user: CurrentUser) -> dict[str, Any]:
-    logger.info("Get CMS stub", uid=user.uid, task_id=task_id)
-    return success_response(
-        data={
-            "task_id": task_id,
-            "score": 0,
-            "momentum": 0,
-            "failure_risk": 0,
-            "completion_probability": 0,
-            "trend": "stable",
-        }
-    )
+    result = _cms_service.recalculate_for_task(task_id, user.uid)
+    return success_response(data=result.model_dump())
 
 
 @router.post(
@@ -35,5 +29,5 @@ async def get_cms(task_id: str, user: CurrentUser) -> dict[str, Any]:
     summary="Force CMS recalculation",
 )
 async def recalculate_cms(task_id: str, user: CurrentUser) -> dict[str, Any]:
-    logger.info("Recalculate CMS stub", uid=user.uid, task_id=task_id)
-    return success_response(data={"message": "CMS service coming in Phase 12"})
+    result = _cms_service.recalculate_for_task(task_id, user.uid)
+    return success_response(data=result.model_dump())
