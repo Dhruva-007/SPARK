@@ -1,9 +1,10 @@
 """
 SPARK — Task Service
 Business logic for the complete task lifecycle.
-Now triggers PlannerAgent on task creation.
+Planning runs as a background task — creation returns immediately.
 """
 
+import asyncio
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -32,20 +33,13 @@ class TaskService:
         self._task_repo = TaskRepository()
         self._milestone_repo = MilestoneRepository()
 
-    async def create_task(
-        self,
-        user_id: str,
-        request: CreateTaskRequest,
-    ) -> Task:
+    def create_task(self, user_id: str, request: CreateTaskRequest) -> Task:
         """
-        Creates a new task and triggers the planning agent.
+        Creates a new task and enqueues planning as a background task.
+        Returns immediately — milestones are generated asynchronously.
 
-        Flow:
-        1. Validate inputs
-        2. Create task in Firestore
-        3. Run PlannerAgent to generate milestones
-        4. Store milestones
-        5. Return task
+        The frontend will see milestonesTotal=0 initially, then the
+        dashboard auto-refreshes via React Query staleTime.
         """
         # Validate deadline
         try:
@@ -84,7 +78,7 @@ class TaskService:
             tags=request.tags,
         )
 
-        # Store in Firestore
+        # Store in Firestore — this is fast
         created_task = self._task_repo.create(task)
         logger.info(
             "Task created",
@@ -93,29 +87,44 @@ class TaskService:
             title=created_task.title,
         )
 
-        # Trigger PlannerAgent
+        # Enqueue planning as background task — do not wait
+        try:
+            asyncio.get_event_loop().create_task(
+                self._run_planning_background(user_id, created_task.id)
+            )
+            logger.info("Planning enqueued as background task", task_id=created_task.id)
+        except RuntimeError:
+            # No event loop — fall back to sync (shouldn't happen in FastAPI)
+            logger.warning(
+                "No event loop — planning skipped, will run on first CMS calculation",
+                task_id=created_task.id,
+            )
+
+        return created_task
+
+    async def _run_planning_background(self, user_id: str, task_id: str) -> None:
+        """
+        Runs PlannerAgent in the background after task creation.
+        Errors are logged but never propagate to the user.
+        """
         try:
             from app.agents.orchestrator import AgentOrchestrator
             orchestrator = AgentOrchestrator()
             plan_result = await orchestrator.run_task_creation_flow(
                 user_id=user_id,
-                task_id=created_task.id,
+                task_id=task_id,
             )
             logger.info(
-                "Task planning complete",
-                task_id=created_task.id,
+                "Background planning complete",
+                task_id=task_id,
                 milestones=plan_result.get("milestones_created", 0),
             )
         except Exception as exc:
-            # Planning failure is non-fatal — task still created
-            logger.warning(
-                "PlannerAgent failed — task created without milestones",
-                task_id=created_task.id,
+            logger.error(
+                "Background planning failed",
+                task_id=task_id,
                 error=str(exc),
             )
-
-        # Return fresh task with updated milestone counts
-        return self._task_repo.get_by_id(created_task.id, user_id)
 
     def get_task(self, task_id: str, user_id: str) -> Task:
         return self._task_repo.get_by_id(task_id, user_id)
@@ -200,11 +209,9 @@ class TaskService:
         )
 
         return self._task_repo.get_by_id(task_id, user_id)
-    
+
     async def complete_task(self, task_id: str, user_id: str) -> Task:
-        """
-        Marks a task as completed and triggers the Reflection Agent.
-        """
+        """Marks a task as completed and triggers reflection in background."""
         task = self._task_repo.get_by_id(task_id, user_id)
 
         if task.status == "completed":
@@ -213,22 +220,17 @@ class TaskService:
         self._task_repo.mark_complete(task_id, user_id)
         logger.info("Task completed", task_id=task_id, user_id=user_id)
 
-        # Trigger Reflection Agent asynchronously
+        # Run reflection in background — don't block the response
         try:
-            from app.services.reflection_service import ReflectionService
-            reflection_service = ReflectionService()
-            completed_task = self._task_repo.get_by_id(task_id, user_id)
-            await reflection_service.create_reflection(completed_task, user_id)
-        except Exception as exc:
-            logger.warning(
-                "Reflection agent failed — task still completed",
-                task_id=task_id,
-                error=str(exc),
+            asyncio.get_event_loop().create_task(
+                self._run_reflection_background(task_id, user_id)
             )
+        except Exception as exc:
+            logger.warning("Could not enqueue reflection", error=str(exc))
 
         # Record in memory
         try:
-            from app.memory.short_term import ShortTermMemory, OBS_MILESTONE_COMPLETED
+            from app.memory.short_term import ShortTermMemory
             stm = ShortTermMemory()
             stm.record(
                 user_id=user_id,
@@ -240,6 +242,20 @@ class TaskService:
             pass
 
         return self._task_repo.get_by_id(task_id, user_id)
+
+    async def _run_reflection_background(self, task_id: str, user_id: str) -> None:
+        """Runs ReflectionAgent in background after task completion."""
+        try:
+            from app.services.reflection_service import ReflectionService
+            reflection_service = ReflectionService()
+            completed_task = self._task_repo.get_by_id(task_id, user_id)
+            await reflection_service.create_reflection(completed_task, user_id)
+        except Exception as exc:
+            logger.warning(
+                "Background reflection failed",
+                task_id=task_id,
+                error=str(exc),
+            )
 
     def delete_task(self, task_id: str, user_id: str) -> None:
         self._task_repo.get_by_id(task_id, user_id)
