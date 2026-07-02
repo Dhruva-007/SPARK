@@ -4,6 +4,7 @@
 
 import React, { useState } from "react";
 import { Plus, Zap } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Modal, ModalFooter } from "@shared/components/ui/Modal";
 import { Input, Textarea } from "@shared/components/ui/Input";
 import { Button } from "@shared/components/ui/Button";
@@ -23,11 +24,11 @@ const CATEGORIES: { value: TaskCategory; label: string }[] = [
   { value: "personal", label: "Personal" },
 ];
 
-const PRIORITIES: { value: TaskPriority; label: string; color: string }[] = [
-  { value: "critical", label: "Critical", color: "text-danger" },
-  { value: "high", label: "High", color: "text-warning" },
-  { value: "medium", label: "Medium", color: "text-accent" },
-  { value: "low", label: "Low", color: "text-text-muted" },
+const PRIORITIES: { value: TaskPriority; label: string }[] = [
+  { value: "critical", label: "Critical" },
+  { value: "high", label: "High" },
+  { value: "medium", label: "Medium" },
+  { value: "low", label: "Low" },
 ];
 
 const COMPLEXITIES: { value: TaskComplexity; label: string }[] = [
@@ -40,6 +41,7 @@ export const TaskCreator: React.FC = () => {
   const { createTaskModalOpen, closeCreateTaskModal } = useTaskStore();
   const createTask = useCreateTask();
   const toast = useToast();
+  const queryClient = useQueryClient();
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -94,9 +96,18 @@ export const TaskCreator: React.FC = () => {
 
     try {
       await createTask.mutateAsync(request);
-      toast.success("Task created", "SPARK is generating your execution plan...");
+      toast.success(
+        "Task created",
+        "SPARK is generating milestones in the background..."
+      );
       resetForm();
       closeCreateTaskModal();
+
+      // Re-fetch task list after delay to pick up async milestones
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["tasks"] });
+        queryClient.invalidateQueries({ queryKey: ["analytics"] });
+      }, 8000);
     } catch (err) {
       toast.error(
         "Failed to create task",
