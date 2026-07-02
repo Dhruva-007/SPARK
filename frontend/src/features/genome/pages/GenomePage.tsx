@@ -1,10 +1,10 @@
 /**
  * SPARK — Genome Page
- * Full behavioral intelligence profile with real data.
+ * Shows real data for experienced users, empty state for new users.
  */
 
 import React from "react";
-import { Brain } from "lucide-react";
+import { Brain, Dna } from "lucide-react";
 import { Header } from "@shared/components/layout/Header";
 import { PageWrapper } from "@shared/components/layout/PageWrapper";
 import { Card, CardHeader } from "@shared/components/ui/Card";
@@ -19,6 +19,7 @@ interface GenomeProfile {
   maturity_level: number;
   total_tasks_analyzed: number;
   is_peak_hour: boolean;
+  current_hour: number;
   peak_hours: number[];
   success_rate: number;
   streak_current: number;
@@ -86,15 +87,27 @@ export const GenomePage: React.FC = () => {
   const estimation = genome.estimation_data;
   const completion = genome.completion_data;
   const intervention = genome.intervention_data;
+  const isNewUser = profile.total_tasks_analyzed === 0;
 
-  const hourlyData = productivity?.hourly_productivity ?? [];
+  // Use browser local hour for "current hour" display
+  const localHour = new Date().getHours();
+
+  const hourlyData = (productivity?.hourly_productivity ?? []).map((h) => ({
+    ...h,
+    is_current: h.hour === localHour,
+  }));
+
   const calib = estimation?.complexity_calibration ?? {};
 
   return (
     <>
       <Header
         title="Completion Genome"
-        subtitle={`Maturity: ${profile.maturity} · Version ${profile.version}`}
+        subtitle={
+          isNewUser
+            ? "Complete tasks to build your behavioral profile"
+            : `Maturity: ${profile.maturity} · Version ${profile.version}`
+        }
       />
       <PageWrapper>
         <div className="space-y-8">
@@ -106,36 +119,46 @@ export const GenomePage: React.FC = () => {
                 size={96}
                 strokeWidth={7}
                 variant="momentum"
-                label={`${Math.round(profile.health_score)}%`}
+                label={isNewUser ? "—" : `${Math.round(profile.health_score)}%`}
                 sublabel="Health"
               />
-              <Badge variant="accent" className="mt-3">{profile.maturity}</Badge>
+              <Badge variant="accent" className="mt-3">
+                {profile.maturity}
+              </Badge>
             </Card>
             <Card padding="md">
               <p className="text-xs text-text-muted mb-1">Success Rate</p>
               <p className="text-2xl font-bold text-text-primary">
-                {completion.success_rate.toFixed(0)}%
+                {isNewUser ? "—" : `${completion.success_rate.toFixed(0)}%`}
               </p>
               <p className="text-xs text-text-muted mt-1">
-                {completion.total_completed} completed / {completion.total_failed} failed
+                {isNewUser
+                  ? "No tasks completed yet"
+                  : `${completion.total_completed} completed / ${completion.total_failed} failed`}
               </p>
             </Card>
             <Card padding="md">
               <p className="text-xs text-text-muted mb-1">Current Streak</p>
               <p className="text-2xl font-bold text-text-primary">
-                {completion.streak_current}
+                {isNewUser ? "—" : String(completion.streak_current)}
               </p>
               <p className="text-xs text-text-muted mt-1">
-                Best: {completion.streak_best}
+                {isNewUser
+                  ? "Complete tasks to start"
+                  : `Best: ${completion.streak_best}`}
               </p>
             </Card>
             <Card padding="md">
               <p className="text-xs text-text-muted mb-1">Estimation Accuracy</p>
               <p className="text-2xl font-bold text-text-primary">
-                {estimation.accuracy_percentage.toFixed(0)}%
+                {isNewUser
+                  ? "—"
+                  : `${estimation.accuracy_percentage.toFixed(0)}%`}
               </p>
               <p className="text-xs text-text-muted mt-1">
-                Factor: {estimation.underestimation_factor.toFixed(2)}x
+                {isNewUser
+                  ? "Needs task data"
+                  : `Factor: ${estimation.underestimation_factor.toFixed(2)}x`}
               </p>
             </Card>
           </div>
@@ -160,8 +183,11 @@ export const GenomePage: React.FC = () => {
                       <div className="flex items-start gap-3">
                         <Badge
                           variant={
-                            insight.priority === "high" ? "danger" :
-                            insight.priority === "medium" ? "warning" : "neutral"
+                            insight.priority === "high"
+                              ? "danger"
+                              : insight.priority === "medium"
+                              ? "warning"
+                              : "neutral"
                           }
                           size="sm"
                         >
@@ -185,69 +211,99 @@ export const GenomePage: React.FC = () => {
               )}
             </div>
 
-            {/* Right — Productivity Heatmap + Stats */}
+            {/* Right — Productivity + Stats */}
             <div className="col-span-5 space-y-4">
               <h2 className="section-title">Productivity Hours</h2>
               <Card padding="md">
-                <div className="grid grid-cols-6 gap-1">
-                  {hourlyData
-                    .filter((h) => h.hour >= 6 && h.hour <= 23)
-                    .map((h) => {
-                      let bg = "bg-neutral-100";
-                      if (h.score > 80) bg = "bg-accent";
-                      else if (h.score > 55) bg = "bg-accent/60";
-                      else if (h.score > 30) bg = "bg-accent/25";
+                {isNewUser ? (
+                  <div className="text-center py-8 space-y-3">
+                    <Dna className="w-8 h-8 text-text-muted mx-auto" />
+                    <p className="text-sm text-text-muted">
+                      Complete tasks to discover your peak productivity hours
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-6 gap-1">
+                      {hourlyData
+                        .filter((h) => h.hour >= 6 && h.hour <= 23)
+                        .map((h) => {
+                          let bg = "bg-neutral-100";
+                          if (h.score > 80) bg = "bg-accent";
+                          else if (h.score > 55) bg = "bg-accent/60";
+                          else if (h.score > 30) bg = "bg-accent/25";
 
-                      return (
-                        <div
-                          key={h.hour}
-                          className={`aspect-square rounded-md flex items-center justify-center text-[10px] font-medium ${bg} ${
-                            h.is_current ? "ring-2 ring-accent ring-offset-1" : ""
-                          } ${h.is_peak ? "text-white" : "text-text-muted"}`}
-                          title={`${h.label}: ${h.score}% productivity`}
-                        >
-                          {h.label}
-                        </div>
-                      );
-                    })}
-                </div>
-                <p className="text-xs text-text-muted mt-3 text-center">
-                  Peak hours highlighted · Current hour has ring
-                </p>
+                          return (
+                            <div
+                              key={h.hour}
+                              className={`aspect-square rounded-md flex items-center justify-center text-[10px] font-medium ${bg} ${
+                                h.is_current
+                                  ? "ring-2 ring-accent ring-offset-1"
+                                  : ""
+                              } ${h.is_peak ? "text-white" : "text-text-muted"}`}
+                              title={`${h.label}: ${h.score}% productivity`}
+                            >
+                              {h.label}
+                            </div>
+                          );
+                        })}
+                    </div>
+                    <p className="text-xs text-text-muted mt-3 text-center">
+                      Peak hours highlighted · Current hour has ring
+                    </p>
+                  </>
+                )}
               </Card>
 
               <Card padding="md">
                 <CardHeader title="Complexity Calibration" />
-                <div className="space-y-3">
-                  {Object.entries(calib).map(([key, val]) => (
-                    <div key={key} className="flex items-center justify-between text-sm">
-                      <span className="text-text-muted capitalize">{key}</span>
-                      <span className="font-medium text-text-primary">
-                        {val.factor.toFixed(2)}x
-                      </span>
-                    </div>
-                  ))}
-                </div>
+                {isNewUser ? (
+                  <p className="text-xs text-text-muted text-center py-4">
+                    No calibration data yet
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {Object.entries(calib).map(([key, val]) => (
+                      <div
+                        key={key}
+                        className="flex items-center justify-between text-sm"
+                      >
+                        <span className="text-text-muted capitalize">{key}</span>
+                        <span className="font-medium text-text-primary">
+                          {val.factor.toFixed(2)}x
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </Card>
 
               <Card padding="md">
                 <CardHeader title="Intervention Effectiveness" />
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-text-muted">Total interventions</span>
-                    <span>{intervention.total_interventions}</span>
+                {intervention.total_interventions === 0 ? (
+                  <p className="text-xs text-text-muted text-center py-4">
+                    No intervention data yet
+                  </p>
+                ) : (
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-text-muted">Total</span>
+                      <span>{intervention.total_interventions}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-text-muted">Effectiveness</span>
+                      <span>
+                        {intervention.effectiveness_rate.toFixed(0)}%
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-text-muted">Best level</span>
+                      <Badge variant="accent" size="sm">
+                        Level {intervention.most_effective_level}
+                      </Badge>
+                    </div>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-text-muted">Effectiveness</span>
-                    <span>{intervention.effectiveness_rate.toFixed(0)}%</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-text-muted">Best level</span>
-                    <Badge variant="accent" size="sm">
-                      Level {intervention.most_effective_level}
-                    </Badge>
-                  </div>
-                </div>
+                )}
               </Card>
             </div>
           </div>
