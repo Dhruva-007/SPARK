@@ -41,7 +41,6 @@ export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
     {isLoading ? (
       <Loader2 className="w-4 h-4 animate-spin text-text-muted" />
     ) : (
-      /* Google logo SVG */
       <svg
         width="18"
         height="18"
