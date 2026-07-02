@@ -125,35 +125,29 @@ SPARK is built as a true autonomous multi-agent system powered by Gemini 2.5 Fla
 ---
 
 ### API Overview
-GET  /api/v1/health                          Liveness probe
-GET  /api/v1/health/ready                    Readiness probe
-
-POST /api/v1/tasks                           Create task (triggers PlannerAgent)
-GET  /api/v1/tasks                           List all tasks
-GET  /api/v1/tasks/{id}                      Task detail
-GET  /api/v1/tasks/{id}/milestones           AI-generated milestones
-GET  /api/v1/tasks/{id}/next-action          MomentumAgent next best action
-GET  /api/v1/tasks/{id}/cms                  Completion Momentum Score
-POST /api/v1/tasks/{id}/complete             Complete task (triggers Reflection)
-POST /api/v1/tasks/{id}/recovery-plan        Recovery Agent plan
-
-GET  /api/v1/genome                          Raw genome data
-GET  /api/v1/genome/full                     Complete intelligence package
-GET  /api/v1/genome/insights                 AI behavioral insights
-GET  /api/v1/genome/productivity             Hourly heatmap data
-
-GET  /api/v1/analytics/completion-health     Overall health score
-GET  /api/v1/analytics/risk-matrix          All tasks risk assessment
-GET  /api/v1/analytics/simulation           Workload collision detection
-
-GET  /api/v1/bankruptcy/assess              Assess workload feasibility
-POST /api/v1/bankruptcy/declare             Declare task bankruptcy
-
-GET  /api/v1/agents/status                  Registered agents list
-GET  /api/v1/agents/memory                  Current memory state
-POST /api/v1/interventions/chat             AI collaboration chat
-
-POST /api/v1/webhooks/cms-worker            Manual CMS recalculation
-POST /api/v1/webhooks/ponr-worker           Manual PONR scan
-
+|GET  |/api/v1/health|                          Liveness probe|
+|---|---|---|
+|GET  |/api/v1/health/ready|                    Readiness probe|
+|POST |/api/v1/tasks|                           Create task (triggers PlannerAgent)|
+|GET  |/api/v1/tasks|                           List all tasks|
+|GET  |/api/v1/tasks/{id}|                      Task detail|
+|GET  |/api/v1/tasks/{id}/milestones|           AI-generated milestones|
+|GET  |/api/v1/tasks/{id}/next-action|          MomentumAgent next best action|
+|GET  |/api/v1/tasks/{id}/cms|                  Completion Momentum Score|
+|POST |/api/v1/tasks/{id}/complete|             Complete task (triggers Reflection)|
+|POST |/api/v1/tasks/{id}/recovery-plan|        Recovery Agent plan|
+|GET  |/api/v1/genome|                          Raw genome data|
+|GET  |/api/v1/genome/full|                     Complete intelligence package|
+|GET  |/api/v1/genome/insights|                 AI behavioral insights|
+|GET  |/api/v1/genome/productivity|             Hourly heatmap data|
+|GET  |/api/v1/analytics/completion-health|     Overall health score|
+|GET  |/api/v1/analytics/risk-matrix|          All tasks risk assessment|
+|GET  |/api/v1/analytics/simulation|           Workload collision detection|
+|GET  |/api/v1/bankruptcy/assess|              Assess workload feasibility|
+|POST |/api/v1/bankruptcy/declare|             Declare task bankruptcy|
+|GET  |/api/v1/agents/status|                  Registered agents list|
+|GET  |/api/v1/agents/memory|                  Current memory state|
+|POST |/api/v1/interventions/chat|             AI collaboration chat|
+|POST |/api/v1/webhooks/cms-worker|            Manual CMS recalculation|
+|POST |/api/v1/webhooks/ponr-worker|           Manual PONR scan|
 ---
