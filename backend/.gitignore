@@ -1,41 +1,19 @@
 # ============================================================
-# SPARK — Root Git Ignore
+# SPARK Backend — Git Ignore
 # ============================================================
 
 # -------------------------------------------------------
-# Environment Files — NEVER COMMIT
+# Environment & Credentials — NEVER COMMIT
 # -------------------------------------------------------
 .env
 .env.local
-.env.development
-.env.staging
 .env.production
-backend/.env
-frontend/.env.local
-frontend/.env.production
-frontend/.env.staging
-
-# -------------------------------------------------------
-# Google Cloud / Firebase Credentials — NEVER COMMIT
-# -------------------------------------------------------
+.env.staging
+firebase-service-account.json
 *service-account*.json
 *service_account*.json
-firebase-adminsdk*.json
-gcloud-credentials.json
-application_default_credentials.json
 *.pem
 *.key
-*.p12
-
-# -------------------------------------------------------
-# Firebase
-# -------------------------------------------------------
-.firebase/
-firebase-debug.log
-firestore-debug.log
-ui-debug.log
-pubsub-debug.log
-.firebaserc
 
 # -------------------------------------------------------
 # Python
@@ -44,58 +22,43 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.so
-*.egg
-*.egg-info/
-dist/
-build/
 *.pyc
 *.pyo
 *.pyd
-.Python
-.tox/
-.coverage
-.coverage.*
-.cache
+
+# Virtual environment
+venv/
+.venv/
+env/
+
+# -------------------------------------------------------
+# Testing
+# -------------------------------------------------------
 .pytest_cache/
 htmlcov/
+.coverage
 coverage.xml
-nosetests.xml
-*.cover
-*.log
+
+# -------------------------------------------------------
+# Type checking
+# -------------------------------------------------------
 .mypy_cache/
 .dmypy.json
 dmypy.json
 
-# Virtual environments
-venv/
-env/
-.venv/
-.env_local/
-
 # -------------------------------------------------------
-# Node
-# -------------------------------------------------------
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
-.npm
-
-# -------------------------------------------------------
-# Build outputs
+# Build
 # -------------------------------------------------------
 dist/
 build/
-*.tsbuildinfo
+*.egg-info/
+*.egg
 
 # -------------------------------------------------------
 # IDE
 # -------------------------------------------------------
-.vscode/settings.json
-.vscode/launch.json
-.vscode/*.code-workspace
 .idea/
+.vscode/settings.json
 *.swp
 *.swo
 *~
@@ -104,27 +67,22 @@ build/
 # OS
 # -------------------------------------------------------
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
 desktop.ini
 
 # -------------------------------------------------------
-# Docker
-# -------------------------------------------------------
-docker-compose.override.yml
-
-# -------------------------------------------------------
 # Logs
 # -------------------------------------------------------
-logs/
 *.log
+logs/
 
 # -------------------------------------------------------
-# Temporary test files
+# Docker
+# -------------------------------------------------------
+.dockerignore
+
+# -------------------------------------------------------
+# Temporary files
 # -------------------------------------------------------
 test_gemini.py
 parser_test
