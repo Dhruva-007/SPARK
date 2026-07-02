@@ -1,6 +1,5 @@
 /**
  * SPARK — Sidebar Navigation
- * Connected to auth store and Firebase sign-out.
  */
 
 import React from "react";
@@ -12,8 +11,6 @@ import {
   Dna,
   BarChart3,
   Zap,
-  Settings,
-  Bell,
   LogOut,
 } from "lucide-react";
 import { useAuth } from "@shared/hooks/useAuth";
@@ -33,11 +30,6 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Genome", path: "/genome", icon: <Dna className="w-4 h-4" /> },
   { label: "Analytics", path: "/analytics", icon: <BarChart3 className="w-4 h-4" /> },
   { label: "Interventions", path: "/interventions", icon: <Zap className="w-4 h-4" /> },
-];
-
-const BOTTOM_ITEMS: NavItem[] = [
-  { label: "Notifications", path: "/notifications", icon: <Bell className="w-4 h-4" /> },
-  { label: "Settings", path: "/settings", icon: <Settings className="w-4 h-4" /> },
 ];
 
 export const Sidebar: React.FC = () => {
@@ -98,65 +90,44 @@ export const Sidebar: React.FC = () => {
         })}
       </nav>
 
-      {/* Bottom navigation */}
-      <div className="px-3 py-4 border-t border-neutral-100 space-y-0.5">
-        {BOTTOM_ITEMS.map((item) => {
-          const active = isActive(item.path);
-          return (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className={clsx("nav-item", active && "nav-item-active")}
-            >
-              <span className={clsx(active ? "text-accent" : "text-text-muted")}>
-                {item.icon}
-              </span>
-              <span className="flex-1 text-sm">{item.label}</span>
-            </NavLink>
-          );
-        })}
-
-        {/* User profile + sign out */}
-        <div className="mt-3 pt-3 border-t border-neutral-100">
-          <div className="flex items-center gap-2 px-1">
-            {/* Avatar */}
-            <div className="flex items-center gap-2 flex-1 min-w-0 px-2 py-1.5">
-              {user?.photoURL ? (
-                <img
-                  src={user.photoURL}
-                  alt={displayName}
-                  className="w-7 h-7 rounded-full object-cover shrink-0"
-                  referrerPolicy="no-referrer"
-                />
-              ) : (
-                <div className="w-7 h-7 rounded-full bg-accent-light flex items-center justify-center shrink-0">
-                  <span className="text-accent text-xs font-semibold">
-                    {initials}
-                  </span>
-                </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-text-primary truncate">
-                  {displayName}
-                </p>
-                {email && (
-                  <p className="text-[10px] text-text-muted truncate">{email}</p>
-                )}
+      {/* User profile + sign out */}
+      <div className="px-3 py-4 border-t border-neutral-100">
+        <div className="flex items-center gap-2 px-1">
+          <div className="flex items-center gap-2 flex-1 min-w-0 px-2 py-1.5">
+            {user?.photoURL ? (
+              <img
+                src={user.photoURL}
+                alt={displayName}
+                className="w-7 h-7 rounded-full object-cover shrink-0"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <div className="w-7 h-7 rounded-full bg-accent-light flex items-center justify-center shrink-0">
+                <span className="text-accent text-xs font-semibold">
+                  {initials}
+                </span>
               </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-medium text-text-primary truncate">
+                {displayName}
+              </p>
+              {email && (
+                <p className="text-[10px] text-text-muted truncate">{email}</p>
+              )}
             </div>
-
-            {/* Sign out button */}
-            <Tooltip content="Sign out" position="right">
-              <button
-                onClick={signOut}
-                disabled={isSigningOut}
-                className="w-7 h-7 rounded-lg flex items-center justify-center text-text-muted hover:text-danger hover:bg-danger-light transition-smooth shrink-0 disabled:opacity-50"
-                aria-label="Sign out"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-              </button>
-            </Tooltip>
           </div>
+
+          <Tooltip content="Sign out" position="right">
+            <button
+              onClick={signOut}
+              disabled={isSigningOut}
+              className="w-7 h-7 rounded-lg flex items-center justify-center text-text-muted hover:text-danger hover:bg-danger-light transition-smooth shrink-0 disabled:opacity-50"
+              aria-label="Sign out"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+            </button>
+          </Tooltip>
         </div>
       </div>
     </aside>
