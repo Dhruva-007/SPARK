@@ -152,7 +152,7 @@ export const LoginPage: React.FC = () => {
         </div>
 
         <p className="text-xs text-text-muted">
-          © 2025 SPARK — Autonomous Completion Intelligence
+          © 2026 SPARK — Autonomous Completion Intelligence
         </p>
       </div>
 
