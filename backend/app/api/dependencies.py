@@ -63,7 +63,7 @@ async def get_current_user(
     settings = get_settings()
 
     # Development bypass — when Firebase project ID is not configured
-    if settings.is_development and not settings.FIREBASE_PROJECT_ID:
+    if settings.is_development and settings.APP_ENV == "development":
         logger.warning(
             "Firebase not configured — development auth bypass active",
             hint="Set FIREBASE_PROJECT_ID in .env to enable real authentication",
