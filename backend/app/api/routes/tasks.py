@@ -1,7 +1,6 @@
 """
 SPARK — Task Routes
-Full CRUD wired to TaskService.
-create_task is async because it triggers the PlannerAgent.
+create_task returns immediately — planning runs in background.
 """
 
 from typing import Any, Optional
@@ -38,10 +37,10 @@ async def create_task(
     request: CreateTaskRequest = Body(...),
 ) -> dict[str, Any]:
     """
-    Creates a task and immediately triggers the PlannerAgent
-    to generate AI-powered milestones.
+    Creates a task and returns immediately.
+    AI milestone generation runs in the background.
     """
-    task = await _task_service.create_task(user.uid, request)
+    task = _task_service.create_task(user.uid, request)
     return success_response(data=task.model_dump())
 
 
@@ -84,7 +83,6 @@ async def complete_task(task_id: str, user: CurrentUser) -> dict[str, Any]:
 
 @router.post("/tasks/{task_id}/activate", summary="Run activation agent")
 async def activate_task(task_id: str, user: CurrentUser) -> dict[str, Any]:
-    """Manually triggers the ActivationAgent for a task."""
     from app.agents.orchestrator import AgentOrchestrator
     orchestrator = AgentOrchestrator()
     result = await orchestrator.run_activation_flow(user.uid, task_id)
@@ -96,7 +94,6 @@ async def activate_task(task_id: str, user: CurrentUser) -> dict[str, Any]:
     summary="Get next best action for a task",
 )
 async def get_next_action(task_id: str, user: CurrentUser) -> dict[str, Any]:
-    """Runs the MomentumAgent to get the next best action."""
     from app.agents.orchestrator import AgentOrchestrator
     orchestrator = AgentOrchestrator()
     result = await orchestrator.run_momentum_check(user.uid, task_id)
