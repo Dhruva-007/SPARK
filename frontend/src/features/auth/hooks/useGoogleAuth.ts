@@ -15,11 +15,9 @@ import { useToast } from "@shared/stores/ui.store";
 
 const googleProvider = new GoogleAuthProvider();
 
-// Request these scopes for Google API integrations (Phase 8+)
 googleProvider.addScope("https://www.googleapis.com/auth/calendar.readonly");
 googleProvider.addScope("https://www.googleapis.com/auth/gmail.readonly");
 
-// Force account picker every time — important for multi-account users
 googleProvider.setCustomParameters({ prompt: "select_account" });
 
 export interface UseGoogleAuthReturn {
@@ -42,7 +40,6 @@ export function useGoogleAuth(): UseGoogleAuthReturn {
 
     try {
       await signInWithPopup(auth, googleProvider);
-      // onAuthStateChanged in AuthProvider handles the rest
     } catch (err) {
       const message = _getAuthErrorMessage(err);
       setError(message);
@@ -58,8 +55,6 @@ export function useGoogleAuth(): UseGoogleAuthReturn {
 
     try {
       await firebaseSignOut(auth);
-      // onAuthStateChanged in AuthProvider handles state update
-      // Router will redirect to /login automatically
     } catch (err) {
       const message = _getAuthErrorMessage(err);
       setError(message);
@@ -72,9 +67,6 @@ export function useGoogleAuth(): UseGoogleAuthReturn {
   return { signIn, signOut, isSigningIn, isSigningOut, error };
 }
 
-/**
- * Converts Firebase auth error codes to user-friendly messages.
- */
 function _getAuthErrorMessage(error: unknown): string {
   if (error && typeof error === "object" && "code" in error) {
     const code = (error as { code: string }).code;
